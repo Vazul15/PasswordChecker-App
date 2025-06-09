@@ -12,7 +12,7 @@ Pass-Checker App is a **password security and lookup tool** designed to quickly 
 ### Prerequisites  
 
 #### Environment Variables  
-Create an `.env` file with the following key-value pairs:  
+Create an `.env` file **in the root directory of the project** with the following key-value pairs:  
 
 ```bash
 DATASOURCE_USERNAME=your_datasource_username
