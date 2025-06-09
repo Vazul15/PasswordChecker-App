@@ -1,0 +1,68 @@
+services:
+  frontend-8080:
+    build:
+      context: ./pass-check-frontend
+      dockerfile: Dockerfile
+    container_name: pass-check-frontend-8080
+    environment:
+      VITE_BACKEND_URL: http://backend-8080:8080
+    ports:
+      - "3000:5173"
+    depends_on:
+      - backend-8080
+
+  frontend-8081:
+    build:
+      context: ./pass-check-frontend
+      dockerfile: Dockerfile
+    container_name: pass-check-frontend-8081
+    environment:
+      VITE_BACKEND_URL: http://backend-8081:8080
+    ports:
+      - "3001:5173"
+    depends_on:
+      - backend-8081    
+  backend-8080:
+    build:
+      context: ./pass-checker-backend
+      dockerfile: Dockerfile
+    container_name: pass-checker-backend-8080
+    environment:
+      DATASOURCE_USERNAME: ${DATASOURCE_USERNAME}
+      DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
+      DATASOURCE_URL: ${DATASOURCE_URL}
+    volumes:
+      - ${DIRECTORY_FOR_CHECK}:/app/testPurpose
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
+  backend-8081:
+    build:
+      context: ./pass-checker-backend
+      dockerfile: Dockerfile
+    container_name: pass-checker-backend-8081
+    environment:
+      DATASOURCE_USERNAME: ${DATASOURCE_USERNAME}
+      DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
+      DATASOURCE_URL: ${DATASOURCE_URL}
+    volumes:
+      - ${DIRECTORY_FOR_CHECK}:/app/testPurpose
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:17
+    container_name: pass-checker-db
+    environment:
+      POSTGRES_DB: passchecker_db
+      POSTGRES_USER: ${DATASOURCE_USERNAME}
+      POSTGRES_PASSWORD: ${DATASOURCE_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
