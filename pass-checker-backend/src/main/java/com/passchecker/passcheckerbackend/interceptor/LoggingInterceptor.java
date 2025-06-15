@@ -26,7 +26,14 @@ public class LoggingInterceptor implements HandlerInterceptor {
 
         Date date = new Date(System.currentTimeMillis());
         LocalDateTime localDateTime = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-        Integer portNumber = Integer.parseInt(request.getHeader("Host").split(":")[1]);
+        
+String hostHeader = request.getHeader("Host");
+String[] hostParts = hostHeader != null ? hostHeader.split(":") : new String[0];
+
+Integer portNumber = hostParts.length > 1 
+    ? Integer.parseInt(hostParts[1])
+    : request.getServerPort();
+
 
         HistoryDTO newHistory = new HistoryDTO(
                 request.getRemoteAddr(),

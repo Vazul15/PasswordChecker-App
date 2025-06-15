@@ -1,9 +1,12 @@
+$(info >>> Betöltött Makefile-ek: $(MAKEFILE_LIST))
+
 -include .env
 
 # Variables
 DATASOURCE_USERNAME ?= postgres
 DATASOURCE_PASSWORD ?= postgres
 DATABASE_NAME ?= postgres
+POSTGRES_DATA_DIR := ./pgdata
 
 FRONTEND_CONTAINER_NAME ?= passchecker-frontend
 BACKEND_1_CONTAINER_NAME ?= passchecker-backend1
@@ -34,7 +37,7 @@ create-network:
 	@echo "Creating network if not exists..."
 	- podman network create $(NETWORK_NAME)
 
-start-db: create-network
+start-db: create-network ensure-db-dir
 	@echo "Starting PostgreSQL container..."
 	- podman rm -f $(POSTGRES_CONTAINER_NAME) || true
 	podman run -d --name $(POSTGRES_CONTAINER_NAME) \
@@ -43,8 +46,12 @@ start-db: create-network
 		-e POSTGRES_DB=$(DATABASE_NAME) \
 		-e POSTGRES_USER=$(DATASOURCE_USERNAME) \
 		-e POSTGRES_PASSWORD=$(DATASOURCE_PASSWORD) \
-		-v $(DIRECTORY_FOR_CHECK):/var/lib/postgresql/data:Z \
+		-v ./pgdata:/var/lib/postgresql/data:Z \
 		$(POSTGRES_IMAGE):$(POSTGRES_TAG)
+
+ensure-db-dir:
+	@mkdir -p $(POSTGRES_DATA_DIR)
+
 
 stop-db:
 	@echo "Stopping and removing PostgreSQL..."
@@ -58,8 +65,14 @@ start-frontend: create-network build
 	- podman rm -f $(FRONTEND_CONTAINER_NAME) || true
 	podman run -d --name $(FRONTEND_CONTAINER_NAME) \
 		--network $(NETWORK_NAME) \
-		-p $(FRONTEND_PORT):5173 \
+		-p $(FRONTEND_PORT):80 \
 		$(FRONTEND_IMAGE_NAME):$(FRONTEND_TAG)
+stop-frontend:
+	@echo "Stopping and removing backend container 1.."
+	- podman stop $(FRONTEND_CONTAINER_NAME) || true
+	- podman rm $(FRONTEND_CONTAINER_NAME) || true
+
+restart-frontend: stop-frontend start-frontend
 
 start-backend1: create-network build
 	@echo "Starting backend-application container 1 on port $(BACKEND_PORT1)..."
@@ -70,6 +83,7 @@ start-backend1: create-network build
 		-e DATASOURCE_URL=jdbc:postgresql://$(POSTGRES_CONTAINER_NAME):5432/$(DATABASE_NAME) \
 		-e DATASOURCE_USERNAME=$(DATASOURCE_USERNAME) \
 		-e DATASOURCE_PASSWORD=$(DATASOURCE_PASSWORD) \
+		--mount type=bind,source=$(DIRECTORY_FOR_CHECK),destination=/app/test-data,readonly,Z \
 		$(BACKEND_IMAGE_NAME):$(BACKEND_TAG)
 
 stop-backend1:
@@ -88,6 +102,7 @@ start-backend2: create-network build
 		-e DATASOURCE_URL=jdbc:postgresql://$(POSTGRES_CONTAINER_NAME):5432/$(DATABASE_NAME) \
 		-e DATASOURCE_USERNAME=$(DATASOURCE_USERNAME) \
 		-e DATASOURCE_PASSWORD=$(DATASOURCE_PASSWORD) \
+		--mount type=bind,source=$(DIRECTORY_FOR_CHECK),destination=/app/test-data,readonly,Z \
 		$(BACKEND_IMAGE_NAME):$(BACKEND_TAG)
 
 stop-backend2:
@@ -97,8 +112,8 @@ stop-backend2:
 
 restart-backend2: stop-backend2 start-backend2
 
-start: start-db start-backend1 start-backend2
-stop: stop-backend1 stop-backend2 stop-db
+start: start-db start-backend1 start-backend2 start-frontend
+stop: stop-backend1 stop-backend2 stop-db stop-frontend
 restart: stop start
 clean: stop
 	@echo "Removing network $(NETWORK_NAME)..."
