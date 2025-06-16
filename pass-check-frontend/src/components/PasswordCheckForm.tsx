@@ -9,7 +9,7 @@ export const PasswordCheckForm = () => {
   const [resultPaths, setResultPaths] = useState<paths | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
-  const prefixFileName: string = "/app/testPurpose/";
+  const prefixFileName: string = "/app/test-data/";
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
